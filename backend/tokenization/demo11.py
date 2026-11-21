@@ -1,27 +1,36 @@
-# Custom BPE using predefined words and frequencies
-
-# Trains a small BPE tokenizer on predefined words and their frequencies, then tests it.
+# Custom BPE using an external corpus
 
 from collections import Counter
+from pathlib import Path
+
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
 
-# Define words and their frequencies
-word_frequency = {
-    "play": 5,
-    "playing": 3,
-    "played": 2
-}
+
+# Step 1: Read the external corpus
+
+corpus_path = Path(__file__).with_name("corpus.txt")
+print(__file__)
+
+
+with open(corpus_path, "r", encoding="utf-8") as file:
+    words = file.read().lower().split()
+
+
+# Step 2: Calculate word frequencies
+
+word_frequency = Counter(words)
 
 print("========== WORD FREQUENCIES ==========")
 
 for word, frequency in word_frequency.items():
     print(word, ":", frequency)
 
-# Count original character pairs, weighted by each word's frequency.
-# BPE training then repeatedly merges frequent pairs into larger tokens.
+
+# Step 3: Calculate initial adjacent character pair frequencies
+
 pair_frequency = Counter()
 
 print("\n========== ADJACENT CHARACTER PAIRS ==========")
@@ -38,31 +47,45 @@ for word, frequency in word_frequency.items():
     for pair in pairs:
         pair_frequency[pair] += frequency
 
-print("\n========== PAIR FREQUENCIES ==========")
+
+print("\n========== INITIAL PAIR FREQUENCIES ==========")
 
 for pair, frequency in pair_frequency.most_common():
     print(pair, ":", frequency)
 
-# Repeat each word so the trainer sees its frequency in the training data.
+
+# Step 4: Prepare corpus data for training
+
 training_words = []
 
 for word, frequency in word_frequency.items():
     training_words.extend([word] * frequency)
 
-# Create BPE tokenizer
-tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+
+# Step 5: Create a BPE tokenizer
+
+tokenizer = Tokenizer(
+    BPE(unk_token="[UNK]")
+)
 
 tokenizer.pre_tokenizer = Whitespace()
 
-# Configure BPE trainer
+
+# Step 6: Configure the BPE trainer
+
 trainer = BpeTrainer(
-    vocab_size=50,
+    vocab_size=20,
     min_frequency=2,
     special_tokens=["[UNK]"]
 )
 
-# Train tokenizer
+
+# Step 7: Train the tokenizer
+
 tokenizer.train_from_iterator(training_words, trainer)
+
+
+# Step 8: Display the learned vocabulary
 
 print("\n========== LEARNED VOCABULARY ==========")
 
@@ -73,10 +96,16 @@ for token, token_id in sorted(
 ):
     print(token, ":", token_id)
 
-# Test the tokenizer
-text = input("\nEnter a sentence: ")
+
+print("\nTotal Vocabulary Size:", len(vocabulary))
+
+
+# Step 9: Test the trained tokenizer
+
+text = input("\nEnter a sentence: ") or "I am learning python"
 
 output = tokenizer.encode(text)
+
 
 print("\n========== TOKENIZATION RESULT ==========")
 

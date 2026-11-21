@@ -1,83 +1,49 @@
-# Custom BPE using predefined corpus
+# Pretrained SentencePiece Tokenization using T5
+# The marker at the beginning of a token represents a word boundary.
 
-# Trains a custom BPE tokenizer using words read from corpus.txt.
+# Uses T5’s pretrained SentencePiece tokenizer and displays tokens, IDs, frequencies, and decoded text.
 
 from collections import Counter
-from pathlib import Path
-from tokenizers import Tokenizer
-from tokenizers.models import BPE
-from tokenizers.trainers import BpeTrainer
-from tokenizers.pre_tokenizers import Whitespace
+from transformers import AutoTokenizer
 
-# Find the corpus beside this script, regardless of where the command is run.
-corpus_path = Path(__file__).with_name("corpus.txt")
-with open(corpus_path, "r", encoding="utf-8") as file:
-    words = file.read().lower().split()
+# Step 1: Load pretrained T5 tokenizer
+tokenizer = AutoTokenizer.from_pretrained("t5-small")
 
-# Calculate word frequencies
-word_frequency = Counter(words)
+# Step 2: Get input sentence
+text = input("Enter a sentence: ") or "I love Learning python"
 
-print("========== WORD FREQUENCIES ==========")
-for word, frequency in word_frequency.items():
-    print(word, ":", frequency)
+# Step 3: Generate SentencePiece tokens
+tokens = tokenizer.tokenize(text)
 
-# Count original character pairs, weighted by each word's frequency.
-# BPE training then repeatedly merges frequent pairs into larger tokens.
-pair_frequency = Counter()
-
-print("\n========== ADJACENT CHARACTER PAIRS ==========")
-
-for word, frequency in word_frequency.items():
-    characters = list(word)
-    pairs = list(zip(characters, characters[1:]))
-
-    print("\nWord:", word)
-    print("Character Pairs:", pairs)
-
-    for pair in pairs:
-        pair_frequency[pair] += frequency
-
-print("\n========== PAIR FREQUENCIES ==========")
-
-for pair, frequency in pair_frequency.most_common():
-    print(pair, ":", frequency)
-
-# Repeat each word so the trainer sees its frequency in the training data.
-corpus = []
-for word, frequency in word_frequency.items():
-    corpus.extend([word] * frequency)
-
-# Create BPE tokenizer
-tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
-tokenizer.pre_tokenizer = Whitespace()
-
-# Configure BPE training
-trainer = BpeTrainer(
-    vocab_size=20,
-    min_frequency=2,
-    special_tokens=["[UNK]"]
-)
-
-# Train the tokenizer
-tokenizer.train_from_iterator(corpus, trainer)
-
-# Display learned vocabulary
-print("\n========== LEARNED VOCABULARY ==========")
-
-vocabulary = tokenizer.get_vocab()
-
-for token, token_id in sorted(
-    vocabulary.items(), key=lambda item: item[1]
-):
-    print(token, ":", token_id)
-
-# Test the tokenizer
-text = input("\nEnter a sentence: ")
-
-output = tokenizer.encode(text)
+# Step 4: Convert tokens into IDs
+token_ids = tokenizer.convert_tokens_to_ids(tokens)
 
 print("\n========== TOKENIZATION RESULT ==========")
+
 print("Original Text:", text)
-print("BPE Tokens:", output.tokens)
-print("Token IDs:", output.ids)
-print("Total Tokens:", len(output.tokens))
+print("SentencePiece Tokens:", tokens)
+print("Token IDs:", token_ids)
+print("Total Tokens:", len(tokens))
+
+# Step 5: Calculate individual token frequencies
+token_frequency = Counter(tokens)
+
+print("\n========== TOKEN FREQUENCIES ==========")
+
+for token, frequency in token_frequency.items():
+    print(token, ":", frequency)
+
+# Step 6: Count neighboring tokens using the list shifted by one position.
+pair_frequency = Counter(zip(tokens, tokens[1:]))
+
+print("\n========== ADJACENT TOKEN PAIR FREQUENCIES ==========")
+
+for pair, frequency in pair_frequency.items():
+    print(pair, ":", frequency)
+
+# Step 7: Decode token IDs
+decoded_text = tokenizer.decode(token_ids)
+
+print("\n========== DECODED TEXT ==========")
+
+print("Decoded Text:", decoded_text)

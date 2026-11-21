@@ -1,6 +1,6 @@
-text = input("Enter Sentence:") or "I Love Learning Python"
+text=input("Enter a sentence:" ) or "I love Learning python "
 
-print("Original Text:", text)
+print("Text:",text)
 print("Length:",len(text))
 print(text.upper())
 print(text.lower())
